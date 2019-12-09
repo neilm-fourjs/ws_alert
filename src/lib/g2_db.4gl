@@ -132,7 +132,7 @@ PUBLIC FUNCTION (this dbInfo) g2_connect(l_dbName STRING) RETURNS ()
     DISPLAY CURRENT, ":Connected to " || this.connection || " Using:", this.driver, " Source:", this.source
   CATCH
     LET l_msg =
-        "Connection to database failed\nDB:",
+        "Connection to database failed!\nDB:",
         this.name,
         "\nSource:",
         this.source,
@@ -144,6 +144,10 @@ PUBLIC FUNCTION (this dbInfo) g2_connect(l_dbName STRING) RETURNS ()
         "\n",
         SQLERRMESSAGE
     DISPLAY l_msg
+    IF SQLCA.SQLCODE = -6366 THEN
+      RUN "echo $LD_LIBRARY_PATH;ldd $FGLDIR/dbdrivers/" || this.driver || ".so"
+			CALL g2_lib.g2_exitProgram(1, l_msg)
+    END IF
     IF this.create_db AND SQLCA.SQLCODE = -329 AND this.type = "ifx" THEN
       CALL this.g2_ifx_createdb()
       LET l_msg = NULL
@@ -155,9 +159,6 @@ PUBLIC FUNCTION (this dbInfo) g2_connect(l_dbName STRING) RETURNS ()
     IF this.create_db AND SQLCA.SQLCODE = -6372 AND this.type = "sqt" THEN
       CALL this.g2_sqt_createdb(this.dir, this.source)
       LET l_msg = NULL
-    END IF
-    IF SQLCA.SQLCODE = -6366 THEN
-      RUN "echo $LD_LIBRARY_PATH;ldd $FGLDIR/dbdrivers/" || this.driver || ".so"
     END IF
     IF l_msg IS NOT NULL THEN
       CALL g2_lib.g2_errPopup(SFMT(% "Fatal Error %1", l_msg))
